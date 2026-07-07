@@ -12,27 +12,68 @@ st.markdown("""
     .sub-header { font-size: 1.2rem; color: #138808; text-align: center; margin-bottom: 2rem; }
     .footer { text-align: center; color: gray; font-size: 0.85rem; margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #eee; }
     
-    /* Qwen-Style Chat Input Box */
-    div[data-testid="stChatInputBox"] {
-        background-color: #202124 !important;
-        border-radius: 24px !important;
-        padding: 8px 16px !important;
-        border: 1px solid #3c4043 !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+    /* Qwen-Style Chat Input Container */
+    .chat-input-container {
+        background-color: #202124;
+        border-radius: 24px;
+        padding: 8px 16px;
+        border: 1px solid #3c4043;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        gap: 10px;
     }
     
     /* Text input styling */
-    .stTextInput > div > div > input {
+    .chat-input-container input {
         background-color: transparent !important;
         color: #e8eaed !important;
         font-size: 16px !important;
+        border: none !important;
+        flex: 1;
     }
     
     /* Hide the label */
-    .stTextInput label {
+    .chat-input-container label {
         display: none !important;
     }
+    
+    /* Send button styling */
+    .send-button {
+        background-color: #FF9933 !important;
+        border-radius: 50% !important;
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border: none !important;
+        cursor: pointer !important;
+        transition: background-color 0.3s !important;
+    }
+    
+    .send-button:hover {
+        background-color: #FF8800 !important;
+    }
+    
+    /* Auto-scroll anchor */
+    #chat-input-anchor {
+        scroll-margin-top: 100px;
+    }
     </style>
+""", unsafe_allow_html=True)
+
+# --- JavaScript for Auto-Scroll ---
+st.markdown("""
+    <script>
+    function scrollToChatInput() {
+        var chatInput = document.querySelector('.chat-input-container');
+        if (chatInput) {
+            chatInput.scrollIntoView({behavior: 'smooth', block: 'center'});
+        }
+    }
+    </script>
 """, unsafe_allow_html=True)
 
 # --- ISSUE CATEGORIES & PROMPTS ---
@@ -99,6 +140,9 @@ if "selected_category" not in st.session_state:
 if "chat_input_value" not in st.session_state:
     st.session_state.chat_input_value = ""
 
+if "should_scroll" not in st.session_state:
+    st.session_state.should_scroll = False
+
 # --- SIDEBAR ---
 with st.sidebar:
     st.header("⚙️ Settings")
@@ -161,6 +205,7 @@ if st.session_state.selected_category:
             if st.button(issue, key=f"issue_{idx}", use_container_width=True):
                 # Pre-fill the chat input with the quick action
                 st.session_state.chat_input_value = f"I am facing an issue with {issue}. How do I report this and get it resolved?"
+                st.session_state.should_scroll = True
                 st.rerun()
 
 # --- GEMINI API SETUP ---
@@ -181,19 +226,41 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# --- PRE-FILLABLE CHAT INPUT (Qwen Style) ---
-# This replaces st.chat_input to allow pre-filling
-with st.container():
-    user_input = st.text_input(
-        "Type your message...",
-        value=st.session_state.chat_input_value,
-        label_visibility="collapsed",
-        placeholder="Ask about government services, file a complaint, or get help...",
-        key="chat_input_field"
-    )
+# --- Auto-scroll trigger ---
+if st.session_state.should_scroll:
+    st.markdown('<div id="chat-input-anchor"></div>', unsafe_allow_html=True)
+    st.markdown("""
+        <script>
+        setTimeout(function() {
+            var anchor = document.getElementById('chat-input-anchor');
+            if (anchor) {
+                anchor.scrollIntoView({behavior: 'smooth', block: 'center'});
+            }
+        }, 100);
+        </script>
+    """, unsafe_allow_html=True)
+    st.session_state.should_scroll = False
 
-# Process the input when user presses Enter
-if user_input:
+# --- PRE-FILLABLE CHAT INPUT WITH SEND BUTTON (Qwen Style) ---
+st.markdown('<div id="chat-input-anchor"></div>', unsafe_allow_html=True)
+
+with st.form(key="chat_form", clear_on_submit=True):
+    col1, col2 = st.columns([10, 1])
+    
+    with col1:
+        user_input = st.text_input(
+            "Type your message...",
+            value=st.session_state.chat_input_value,
+            label_visibility="collapsed",
+            placeholder="Ask about government services, file a complaint, or get help...",
+            key="chat_input_field"
+        )
+    
+    with col2:
+        # Send button with icon
+        submitted = st.form_submit_button("➤", use_container_width=True)
+
+if submitted and user_input.strip():
     # Clear the input value for next time
     st.session_state.chat_input_value = ""
     
