@@ -2,17 +2,51 @@ import streamlit as st
 import google.generativeai as genai
 
 # --- PAGE CONFIGURATION ---
-st.set_page_config(page_title="Smart Bharat - Civic Companion", page_icon="🇮🇳", layout="wide")
+st.set_page_config(page_title="Smart Bharat - Civic Companion", page_icon="🇮", layout="wide")
 
-# --- CUSTOM CSS ---
+# --- CUSTOM CSS (Qwen AI Style Chat Box) ---
 st.markdown("""
     <style>
+    /* General App Styling */
     .main-header { font-size: 2.5rem; color: #FF9933; text-align: center; font-weight: bold; margin-bottom: 0.5rem; }
     .sub-header { font-size: 1.2rem; color: #138808; text-align: center; margin-bottom: 2rem; }
-    .category-card { background: #f8f9fa; padding: 1rem; border-radius: 10px; text-align: center; border: 2px solid #e9ecef; transition: all 0.3s; }
-    .category-card:hover { border-color: #FF9933; background: #fff3e0; }
-    .selected-card { background: #e8f5e9; border-color: #138808; }
     .footer { text-align: center; color: gray; font-size: 0.85rem; margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #eee; }
+    
+    /* Qwen-Style Chat Input Box */
+    div[data-testid="stChatInput"] {
+        background-color: #202124 !important; /* Dark gray background */
+        border-radius: 24px !important; /* Rounded pill shape */
+        padding: 8px 16px !important;
+        border: 1px solid #3c4043 !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+    }
+    
+    /* Text area inside the chat box */
+    div[data-testid="stChatInput"] textarea {
+        background-color: transparent !important;
+        color: #e8eaed !important; /* Light text */
+        font-size: 16px !important;
+        border: none !important;
+        resize: none !important;
+    }
+    
+    /* Send button styling */
+    div[data-testid="stChatInput"] button {
+        background-color: #FF9933 !important; /* Saffron/Orange color */
+        border-radius: 50% !important;
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin-left: 10px !important;
+    }
+    
+    /* Hide the default label of chat input */
+    div[data-testid="stChatInput"] label {
+        display: none !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -42,7 +76,7 @@ issue_categories = {
         "issues": ["Theft & Burglary", "Women Safety", "Cyber Crime", "Domestic Violence", "Harassment"],
         "prompt": "You are a public safety expert. Help citizens report crimes and get emergency assistance. Guide them to police portals and women helplines (1091, 181). Prioritize emergency contacts."
     },
-    "🌳 Environment": {
+    " Environment": {
         "issues": ["Air Pollution", "Noise Pollution", "Illegal Encroachment", "Tree Cutting", "Industrial Waste"],
         "prompt": "You are an environmental expert. Help citizens report pollution and environmental violations. Guide them to State Pollution Control Boards."
     },
@@ -50,11 +84,11 @@ issue_categories = {
         "issues": ["Hospital Services", "Vaccination", "Ayushman Bharat", "Medicine Availability", "Ambulance"],
         "prompt": "You are a public health expert. Help citizens access government hospitals, Ayushman Bharat benefits, and emergency medical services (108)."
     },
-    "🎓 Education": {
+    " Education": {
         "issues": ["School Admissions", "Scholarships", "Mid-Day Meal", "School Infrastructure", "Teacher Complaints"],
         "prompt": "You are an education expert. Help citizens with school admissions, scholarships, and RTE Act information. Guide them to state education departments."
     },
-    "🌾 Agriculture": {
+    " Agriculture": {
         "issues": ["PM-KISAN", "Crop Insurance", "Irrigation Issues", "Subsidies & Loans", "MSP Information"],
         "prompt": "You are an agriculture expert. Help farmers access PM-KISAN, crop insurance (PMFBY), and subsidies. Guide them to agriculture department portals."
     },
@@ -108,7 +142,7 @@ with st.sidebar:
         st.rerun()
 
 # --- MAIN HEADER ---
-st.markdown('<div class="main-header">🇮🇳 Smart Bharat</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">🇮 Smart Bharat</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">AI-Powered Civic Companion</div>', unsafe_allow_html=True)
 
 # --- CATEGORY SELECTION UI ---
@@ -140,16 +174,15 @@ if st.session_state.selected_category:
     for idx, issue in enumerate(cat_data['issues']):
         with sub_cols[idx % len(sub_cols)]:
             if st.button(issue, key=f"issue_{idx}", use_container_width=True):
-                # Set the quick action query and scroll marker
+                # Set the quick action query
                 st.session_state.quick_action_query = f"I am facing an issue with {issue}. How do I report this and get it resolved?"
-                st.session_state.scroll_to_chat = True
                 st.rerun()
 
 # --- GEMINI API SETUP ---
 try:
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-3.5-flash') 
+    model = genai.GenerativeModel('gemini-1.5-flash') 
 except KeyError:
     st.error("⚠️ GEMINI_API_KEY not found in Streamlit Secrets! Please add it in the app settings.")
     st.stop()
@@ -158,9 +191,6 @@ except KeyError:
 st.divider()
 st.subheader("💬 Chat with Civic Assistant")
 
-# Add anchor for scrolling
-st.markdown('<div id="chat-section"></div>', unsafe_allow_html=True)
-
 # Display all previous messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -168,33 +198,26 @@ for message in st.session_state.messages:
 
 # Show hint if quick action is selected
 if st.session_state.quick_action_query:
-    st.info(f"📝 **Quick Action Ready:** The chat input below is pre-filled. Just press Enter to send!")
+    st.info(f"📝 **Quick Action Ready:** \"{st.session_state.quick_action_query}\"\n\n*The chat box below is ready. Just press **Enter** to send, or edit the text first!*")
 
-# --- CHAT INPUT (Always at the bottom) ---
-# Use a form to capture Enter key
-with st.form(key="chat_form", clear_on_submit=True):
-    # Pre-fill with quick action query if available
-    default_value = st.session_state.quick_action_query if st.session_state.quick_action_query else ""
-    
-    user_input = st.text_input(
-        "Your Message:",
-        value=default_value,
-        label_visibility="collapsed",
-        placeholder="Ask about government services, file a complaint, or get help...",
-        key="chat_input_field"
-    )
-    
-    submitted = st.form_submit_button("➤ Send", use_container_width=True, type="primary")
+# --- QWEN-STYLE CHAT INPUT (Always at the bottom) ---
+# We use the native st.chat_input which is fixed at the bottom of the screen
+prompt = st.chat_input("Ask about government services, file a complaint, or get help...")
 
-if submitted and user_input.strip():
-    # Clear the quick action query
-    st.session_state.quick_action_query = ""
+if prompt:
+    # If there was a quick action, we use it, otherwise use the typed prompt
+    # (Note: st.chat_input doesn't support pre-filling natively, so we show the hint above)
+    user_input = prompt
     
-    # Show user message
+    # Clear quick action if it was used
+    if st.session_state.quick_action_query:
+        st.session_state.quick_action_query = ""
+
+    # Show user message immediately
     with st.chat_message("user"):
         st.markdown(user_input)
     
-    # Show AI response
+    # Show AI thinking and response
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         message_placeholder.markdown("🤔 *Thinking...*")
@@ -233,9 +256,6 @@ if submitted and user_input.strip():
             # Save to history
             st.session_state.messages.append({"role": "user", "content": user_input})
             st.session_state.messages.append({"role": "assistant", "content": response.text})
-            
-            # Rerun to show the new messages
-            st.rerun()
             
         except Exception as e:
             message_placeholder.error(f"Error: {e}")
