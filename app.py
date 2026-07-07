@@ -182,7 +182,7 @@ if st.session_state.selected_category:
 try:
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash') 
+    model = genai.GenerativeModel('gemini-3.5-flash') 
 except KeyError:
     st.error("⚠️ GEMINI_API_KEY not found in Streamlit Secrets! Please add it in the app settings.")
     st.stop()
